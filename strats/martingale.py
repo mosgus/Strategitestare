@@ -19,7 +19,11 @@ def _slugify_label(label):
 
 def run_martingale(initial_balance, buyout, sequence_path=None, bet_spec=None):
     balance = initial_balance
-    target_balance = initial_balance + buyout
+    buyout_input = buyout
+    if buyout > initial_balance:
+        target_balance = buyout
+    else:
+        target_balance = initial_balance + buyout
     current_wager = 1.0
     round_count = 0
     rows = []
@@ -91,13 +95,13 @@ def run_martingale(initial_balance, buyout, sequence_path=None, bet_spec=None):
         print(f"{outcome_label}: Bankroll hit zero in {round_count} rounds. - 🔴")
 
     n_str = int(initial_balance)
-    m_str = int(buyout)
+    m_str = int(buyout_input)
     bet_slug = _slugify_label(bet_label_for_file)
     filename = f"martingale_{n_str}n{m_str}m{bet_slug}.csv"
 
-    dir = './strat_data'
-    os.makedirs(dir, exist_ok=True)
-    path = os.path.join(dir, filename)
+    out_dir = os.path.join(os.path.dirname(__file__), 'strat_data')
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, filename)
     with open(path, 'w', newline='') as f:
         writer = csv.DictWriter(
             f,
