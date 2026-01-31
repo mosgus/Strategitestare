@@ -1,4 +1,4 @@
-# Roulette Lab 🎰🧪
+# Roulette Lab 🎰
 
 (FREE American Roulette Datasets in /sequences)
 
