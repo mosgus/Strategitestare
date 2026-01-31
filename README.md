@@ -55,12 +55,14 @@ python -m pip install matplotlib
 python generate_seq.py 200
 ```
 
-**Run Martingale (live RNG)**
+**Run Martingale (live RNG)**  
+`M` is always the target net profit, so the buyout target is `N + M`.
 ```bash
 python -m strats.martingale 100 80 red
 ```
 
-**Run Martingale (sequence CSV)**
+**Run Martingale (sequence CSV)**  
+`M` is always the target net profit, so the buyout target is `N + M`.
 ```bash
 python -m strats.martingale 100 80 ./sequences/roulette_sequence_200.csv red
 ```
