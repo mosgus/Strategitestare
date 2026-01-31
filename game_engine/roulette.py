@@ -1,29 +1,61 @@
+# roulette.py
+"""
+    Wheel Spin Logic for American Roulette:
+
+        input: bet_array (list): A list of 38 numbers representing bets on [0, 00, 1, 2, ..., 36]
+        output: payout (float): The net earnings (e.g. +35.0 or -10.0)
+
+"""
 import random
 
+''' INDEX/LABEL MAPPING '''
+def index_to_num(index):
+    if index == 0:
+        return '0'
+    if index == 1:
+        return '00'
+    return str(index - 1)
 
-def spin_wheel(bet_array):
-    """
-    Simulates an American Roulette spin.
+def num_to_index(label):
+    if label == '0':
+        return 0
+    if label == '00':
+        return 1
+    return int(label) + 1
 
-    input:
-        bet_array (list): A list of 38 numbers representing bets on [0, 00, 1, 2, ..., 36]
-    output:
-        payout (float): The net earnings (e.g. +35.0 or -10.0)
-    """
-    total_wagered = sum(bet_array)     # 1. Calc the user bet
+''' RNG HELPER '''
+def get_rng(seed=None):
+    if seed is None:
+        return random
+    return random.Random(seed)
 
-    winning_index = random.randint(0, 37)     # 2. Pick a random winning index (0 to 37)
+''' "SPIN" ROULETTE WHEEL '''
+def spin(rng=None, seed=None):
+    if rng is None:
+        rng = get_rng(seed)
+    return rng.randint(0, 37) # pick a random winning index(0 to 37)
 
-    amount_on_winner = bet_array[winning_index]     # 3. Calculate slot payout
+''' DETERMINE PAYOUT '''
+def payout(bet_array, winning_index):
+    total_wagered = sum(bet_array)              # 1. measure user bet
+    amount_on_winner = bet_array[winning_index]  # 2. check amount bet on winning index
 
-    print(f"Winning tile: {winning_index}, Amount on winner: {amount_on_winner:.2f}")
+    ''' ? WIN or LOSE ¿ '''
+    if amount_on_winner > 0: payout = amount_on_winner + (amount_on_winner * 35) # WIN
+    else: payout = 0 # LOSE
 
-    if amount_on_winner > 0: # WIN
-        payout = amount_on_winner + (amount_on_winner * 35)
-    else: # LOSE
-        payout = 0
+    ''' output'''
+    return payout - total_wagered # 3. Return result
 
-    return payout - total_wagered # 4. Return the net result
+''' ROULETTE '''
+def roulette(bet_array, rng=None, seed=None):
+    winning_index = spin(rng, seed)
+    winning_num = index_to_num(winning_index)
+    net_payout = payout(bet_array, winning_index)
+    if net_payout > 0: dub = 1
+    else: dub = 0
+
+    return dub, winning_index, winning_num, net_payout
 
 '''
 USAGE EXAMPLE 1:1: 
@@ -35,10 +67,12 @@ if __name__ == "__main__":
     for i in range(2, 20):
         test_bet[i] = bet_amount_per_number
 
-    result = spin_wheel(test_bet)
+    dub, winner, winner_label, net = roulette(test_bet)
 
-    if result > 0:
-        print(f"You win: +{result:.2f}")
+    print(f"Winning Index: {winner}")
+    print(f"Winning Number: {winner_label}")
+    if dub > 0:
+        print(f"You win: +{net:.2f}")
     else:
-        print(f"You lose: {result:.2f}")
+        print(f"You lose: {net:.2f}")
 '''
