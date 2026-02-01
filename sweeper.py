@@ -9,7 +9,7 @@ from strats import io as strat_io
 from strats.martingale import run_martingale
 
 
-def simulate_point(n, m_profit, iterations, bet_spec='red', seed_base=None, outcomes=None):
+def simulate_point(n, m, iterations, bet_spec='red', seed_base=None, outcomes=None):
     wins = 0
     total_return = 0.0
 
@@ -17,7 +17,7 @@ def simulate_point(n, m_profit, iterations, bet_spec='red', seed_base=None, outc
         rng = None
         if outcomes is None and seed_base is not None:
             rng = random.Random(seed_base + i)
-        result = run_martingale(n, m_profit, bet_spec=bet_spec, outcomes=outcomes, rng=rng)
+        result = run_martingale(n, m, bet_spec=bet_spec, outcomes=outcomes, rng=rng)
         if result['outcome_label'] == 'SUCCESS':
             wins += 1
         total_return += (result['final_balance'] - n)
@@ -61,7 +61,6 @@ def run_assignment(
     n_values,
     m_values,
     m_mode,
-    progress,
     progress_every,
 ):
     os.makedirs('assignment_data', exist_ok=True)
@@ -69,8 +68,21 @@ def run_assignment(
     if outcomes and iterations > 1:
         print("Note: sequence replay is deterministic; iterations > 1 will repeat identical runs.")
 
-    n_sweep = n_values or list(range(n_min, n_max + 1, n_step))
-    m_sweep = m_values or list(range(m_min, m_max + 1, m_step))
+    if n_values:
+        n_sweep = n_values
+    else:
+        if n_min == 1 and n_step > 1:
+            n_sweep = [1] + list(range(n_step, n_max + 1, n_step))
+        else:
+            n_sweep = list(range(n_min, n_max + 1, n_step))
+
+    if m_values:
+        m_sweep = m_values
+    else:
+        if m_min == 1 and m_step > 1:
+            m_sweep = [1] + list(range(m_step, m_max + 1, m_step))
+        else:
+            m_sweep = list(range(m_min, m_max + 1, m_step))
 
     # Scenario 1 & 3: Fixed M (profit target), N from n_min to n_max
     results_n = []
@@ -90,22 +102,22 @@ def run_assignment(
         )
         results_n.append({
             'N': n,
-            'M_profit': fixed_m,
+            'M': fixed_m,
             'Wins': wins,
             'Iterations': iterations,
             'Prob_Win': f"{prob:.6f}",
             'Expected_Return': f"{exp:.6f}",
         })
-        if progress and (point_index % progress_every == 0 or point_index == total_points):
+        if point_index % progress_every == 0 or point_index == total_points:
             elapsed = time.time() - start_time
             msg = f"[{point_index}/{total_points}] N={n} M={fixed_m} elapsed={elapsed:.1f}s"
             print(msg, end="\r", flush=True)
 
     # Scenario 2 & 4: Fixed N, M (profit target) from m_min to m_max
     results_m = []
-    for m_profit in m_sweep:
+    for m in m_sweep:
         point_index += 1
-        buyout = _resolve_buyout(fixed_n, m_profit, m_mode)
+        buyout = _resolve_buyout(fixed_n, m, m_mode)
         wins, prob, exp = simulate_point(
             fixed_n,
             buyout,
@@ -116,22 +128,22 @@ def run_assignment(
         )
         results_m.append({
             'N': fixed_n,
-            'M_profit': m_profit,
+            'M': m,
             'Wins': wins,
             'Iterations': iterations,
             'Prob_Win': f"{prob:.6f}",
             'Expected_Return': f"{exp:.6f}",
         })
-        if progress and (point_index % progress_every == 0 or point_index == total_points):
+        if point_index % progress_every == 0 or point_index == total_points:
             elapsed = time.time() - start_time
-            msg = f"[{point_index}/{total_points}] N={fixed_n} M={m_profit} elapsed={elapsed:.1f}s"
+            msg = f"[{point_index}/{total_points}] N={fixed_n} M={m} elapsed={elapsed:.1f}s"
             print(msg, end="\r", flush=True)
 
-    suffix = "target_balance" if m_mode == 'target_balance' else "profit"
+    suffix = iterations
     with open(f'assignment_data/fixed_M_{fixed_m}_{suffix}.csv', 'w', newline='') as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=['N', 'M_profit', 'Wins', 'Iterations', 'Prob_Win', 'Expected_Return'],
+            fieldnames=['N', 'M', 'Wins', 'Iterations', 'Prob_Win', 'Expected_Return'],
         )
         writer.writeheader()
         writer.writerows(results_n)
@@ -139,13 +151,12 @@ def run_assignment(
     with open(f'assignment_data/fixed_N_{fixed_n}_{suffix}.csv', 'w', newline='') as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=['N', 'M_profit', 'Wins', 'Iterations', 'Prob_Win', 'Expected_Return'],
+            fieldnames=['N', 'M', 'Wins', 'Iterations', 'Prob_Win', 'Expected_Return'],
         )
         writer.writeheader()
         writer.writerows(results_m)
 
-    if progress:
-        print()
+    print()
     print("Assignment data saved to /assignment_data")
 
 
@@ -171,8 +182,7 @@ def parse_args():
         default='profit',
         choices=['profit', 'target_balance'],
     )  # Interpret M as profit or target balance
-    parser.add_argument('--progress', action='store_true')  # Print progress as points finish
-    parser.add_argument('--progress-every', type=int, default=100)  # Progress print interval
+    parser.add_argument('--progress-every', type=int, default=5)  # Progress print interval
     return parser.parse_args()
 
 
@@ -194,6 +204,5 @@ if __name__ == "__main__":
         n_values=_parse_values_list(args.n_values),
         m_values=_parse_values_list(args.m_values),
         m_mode=args.m_mode,
-        progress=args.progress,
         progress_every=max(1, args.progress_every),
     )
